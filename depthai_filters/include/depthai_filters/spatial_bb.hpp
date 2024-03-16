@@ -8,6 +8,7 @@
 #include "sensor_msgs/msg/image.hpp"
 #include "vision_msgs/msg/detection3_d_array.hpp"
 #include "visualization_msgs/msg/marker_array.hpp"
+#include "autoware_auto_perception_msgs/msg/tracked_objects.hpp"
 
 namespace depthai_filters {
 class SpatialBB : public rclcpp::Node {
@@ -19,6 +20,8 @@ class SpatialBB : public rclcpp::Node {
                    const sensor_msgs::msg::CameraInfo::ConstSharedPtr& info,
                    const vision_msgs::msg::Detection3DArray::ConstSharedPtr& detections);
 
+    void spatialDetect(const vision_msgs::msg::Detection3DArray::ConstSharedPtr& detections);
+
     message_filters::Subscriber<sensor_msgs::msg::Image> previewSub;
     message_filters::Subscriber<vision_msgs::msg::Detection3DArray> detSub;
     message_filters::Subscriber<sensor_msgs::msg::CameraInfo> infoSub;
@@ -27,6 +30,7 @@ class SpatialBB : public rclcpp::Node {
         syncPolicy;
     std::unique_ptr<message_filters::Synchronizer<syncPolicy>> sync;
     rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr markerPub;
+    rclcpp::Publisher<autoware_auto_perception_msgs::msg::TrackedObjects>::SharedPtr trackedPub;
     rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr overlayPub;
     std::vector<std::string> labelMap = {"background", "aeroplane", "bicycle",     "bird",  "boat",        "bottle", "bus",
                                          "car",        "cat",       "chair",       "cow",   "diningtable", "dog",    "horse",

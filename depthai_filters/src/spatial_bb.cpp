@@ -20,6 +20,7 @@ void SpatialBB::onInit() {
     overlayPub = this->create_publisher<sensor_msgs::msg::Image>("overlay", 10);
     desqueeze = this->declare_parameter<bool>("desqueeze", false);
     labelMap = this->declare_parameter<std::vector<std::string>>("label_map", labelMap);
+    trackedPub = this->create_publisher<autoware_auto_perception_msgs::msg::TrackedObjects>("tracked_objects", 10);
 }
 
 void SpatialBB::overlayCB(const sensor_msgs::msg::Image::ConstSharedPtr& preview,
@@ -60,14 +61,14 @@ void SpatialBB::overlayCB(const sensor_msgs::msg::Image::ConstSharedPtr& preview
         utils::addTextToFrame(previewMat, confStr.str(), x1 + 10, y1 + 40);
 
         std::stringstream depthX;
-        depthX << "X: " << detection.results[0].pose.pose.position.x << " mm";
+        depthX << "X: " << detection.results[0].pose.pose.position.x << " m";
         utils::addTextToFrame(previewMat, depthX.str(), x1 + 10, y1 + 60);
 
         std::stringstream depthY;
-        depthY << "Y: " << detection.results[0].pose.pose.position.y << " mm";
+        depthY << "Y: " << detection.results[0].pose.pose.position.y << " m";
         utils::addTextToFrame(previewMat, depthY.str(), x1 + 10, y1 + 75);
         std::stringstream depthZ;
-        depthZ << "Z: " << detection.results[0].pose.pose.position.z << " mm";
+        depthZ << "Z: " << detection.results[0].pose.pose.position.z << " m";
         utils::addTextToFrame(previewMat, depthZ.str(), x1 + 10, y1 + 90);
 
         // Marker publishing
@@ -141,6 +142,23 @@ void SpatialBB::overlayCB(const sensor_msgs::msg::Image::ConstSharedPtr& preview
     cv_bridge::CvImage(preview->header, sensor_msgs::image_encodings::BGR8, previewMat).toImageMsg(outMsg);
 
     overlayPub->publish(outMsg);
+
+    spatialDetect(detections);
+}
+
+void SpatialBB::spatialDetect(const vision_msgs::msg::Detection3DArray::ConstSharedPtr& detections) {
+    autoware_auto_perception_msgs::msg::TrackedObjects tracked_objects;
+    tracked_objects.header = detections->header;
+    for(auto& detection : detections->detections) {
+        autoware_auto_perception_msgs::msg::TrackedObject tracked_object;
+
+        tracked_object.existence_probability = detection.results[0].hypothesis.score;
+        tracked_object.kinematics.pose_with_covariance.pose.position = detection.results[0].pose.pose.position;
+        tracked_objects.objects.push_back(tracked_object);
+    }
+
+    trackedPub->publish(tracked_objects);
+
 }
 
 }  // namespace depthai_filters
